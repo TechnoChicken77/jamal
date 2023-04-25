@@ -1,0 +1,13 @@
+#!/bin/sh
+if [ "$CXX" = "" ]
+then
+    CXX=g++;
+fi
+echo using $CXX as C++ compiler...
+echo cleaning previous build...
+rm -rf build.d
+mkdir build.d
+echo building...
+$($CXX -Ofast -flto=thin main.cpp -o build.d/jamal)
+chmod +x build.d/jamal
+echo done!

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Jamal - The programing language!</title>
+    </head>
+    <body>
+        <h1>Official Jamal documentation</h1>
+        <p>The official Jamal documentation. May contain mistakes and unrelevant information. Written by TechnoChicken#3973</p>
+        <h2>Instructions</h2>
+        <h4>Instructions are the base of Jamal, nothing is possible without them. Here you can see all of the built-in instructions and their usage.</h4>
+        <ul>
+            <li><h4>OUT(string arg1)</h4></li>
+            <p>Used to output a string in arg1 to a terminal.</p>
+            <p>Example: OUT("Hello World\n")</p>
+            <li><h4>VAR(string arg1, string arg2, none arg3)</h4></li>
+            <p>Used to create a variable with type named in arg1 and name of arg2. Value of a varible is passed via arg3.</p>
+            <p>Example: VAR("int", "i1", 10)</p>
+            <li><h4>I_TS(int arg1)</h4></li>
+            <p>Used to convert an int into string.</p>
+            <p>Example: I_TS(48)</p>
+            <li><h4>RMSTK(int arg1)</h4></li>
+            <p>Removes a memmory stack with adress/index in arg1.</p>
+            <p>Example: RMSTK(2)</p>
+            <li><h4>ADDOF(string arg1)</h4></li>
+            <p>Returns an address/index of a variable.</p>
+            <p>Example: ADDOF("var1")</p>
+            <li><h4>CALL(string arg1, *args*)</h4></li>
+            <p>Allows to call a section. Retuns whatever was returned by the section. All arguments after arg1 wil be turned into section arguments.</p>
+            <p>Example: CALL("section1", 46, "some-string")</p>
+            <li><h4>PUSH(int arg1, int arg2, none arg3)</h4></li>
+            <p>Allows to write contents of arg3 to stack at arg1. Data will be written at adress of arg2.</p>
+            <p>Example: PUSH(0, 16, $some_variable)</p>
+            <li><h4>TAKE(int arg1, int arg2, int arg3)</h4></li>
+            <p>Allows to read arg3 bytes starting from arg2 in stack located at arg1</p>
+            <p>Example: TAKE(0, 8, 8)</p>
+            <li><h4>UBIND(string arg1)</h4></li>
+            <p>Unbinds variable with name of arg1 from section variables, while keeping its stack.</p>
+            <p>Example: UBIND("var1")</p>
+            <li><h4>BIND(int arg1, string arg2, string arg3)</h4></li>
+            <p>Binds stack at arg1 to a variable named as arg3 with type of arg2.</p>
+            <p>Example: BIND(0, "string" "s")</p>
+            <li><h4>APPND(int arg1, none arg2)</h4></li>
+            <p>Appends arg2 to stack at arg1.</p>
+            <p>Example: APPND(ADDOF("hello") + " World!\n")</p>
+            <l1><h4>ALLOC(int arg1)</h4></l1>
+            <p>Retuns an empty stack with size of arg1.</p>
+            <p>Example: ALLOC(16)</p>
+            <li><h4>SIZEOF(int arg1)</h4></li>
+            <p>Retuns size of the stack at ag1.</p>
+            <p>Example: SIZEOF(2)</p>
+            <li><h4>STRIPE(int arg1, int arg2, int arg3)</h4></li>
+            <p>Removes all bytes of a stack except arg3 bytes located at arg2.</p>
+            <p>Example: STRIPE(0, 8, 8)</p>
+            <li><h4>IN()</h4></li>
+            <p>Instruction used for keybpard input.</p>
+            <p>Example: VAR("string", "user_input", IN)</p>
+            <li><h4>Note, that there are also __INTOP and __STROP instructions, however, due to their specific use case, no documentation for them will be provided. These instructions weren't meant to be used outside of their specific use case.</h4></li>
+        </ul>
+        <h2>Imports</h2>
+        <h4>Imports are used to load code that is located outside of the main file.</h4>
+        <p>To import code, <h4>#import</h4> should be used.</p>
+        <p>Example: #import jbase.jml</p>
+        <p>If the file path contains spaces, \s shoud be used at their place. Also, for now there is no way to check what was already imported to prevent duplicate imports, however this feature will be comming in future.</p> 
+    </body>
+</html>

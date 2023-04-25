@@ -1,0 +1,225 @@
+#section mklist (string type)
+    VAR("list", "new_list", ALLOC(16))
+    $new_list.set_type($type)
+    $new_list.init_data
+    VAR("stack", "list", $new_list)
+    RMSTK(ADDOF("new_list"))
+    UBIND("new_list")
+    #return ($list)
+#endsection
+
+#type list
+    #subsection set_type __LIST_SET_TYPE
+    #subsection init_data __LIST_INIT_DATA
+
+    #subsection at __LIST_AT
+    #subsection append __LIST_APPEND
+    #subsection size __LIST_SIZE
+    #subsection edit __LIST_EDIT
+    #subsection remove __LIST_REMOVE
+
+    #destroyer __LIST_DESTROY
+    #clone __LIST_CLONE
+#endtype
+
+#section __LIST_SET_TYPE (string type)
+    VAR("string", "stored_type", $type)
+    VAR("int", "type_ptr", ADDOF("stored_type"))
+    UBIND("stored_type")
+    VAR("int", "this_ptr", ADDOF("this"))
+    PUSH($this_ptr, 0, $type_ptr)
+    #return (0)
+#endsection
+
+#section __LIST_INIT_DATA
+    VAR("none", "new_data", ALLOC(1))
+    VAR("int", "data_ptr", ADDOF("new_data"))
+    VAR("int", "this_ptr", ADDOF("this"))
+    UBIND("new_data")
+    PUSH($this_ptr, 8, $data_ptr)
+    #return (0)
+#endsection
+
+#section __LIST_AT (int index)
+    VAR("int", "this_ptr", ADDOF("this"))
+    VAR("int", "type_ptr", TAKE($this_ptr, 0, 8))
+    VAR("string", "type", $($type_ptr))
+    VAR("int", "data_ptr", TAKE($this_ptr, 8, 8))
+    BIND($data_ptr, "__LIST_DATA", "data")
+    VAR("int", "result_ptr", $data.at($type, $index))
+    UBIND("data")
+    BIND($result_ptr, $type, "raw_result")
+    VAR("stack", "result", $raw_result.clone)
+    RMSTK($result_ptr)
+    UBIND("raw_result")
+    #return ($result)
+#endsection
+
+#section __LIST_APPEND (none value)
+    VAR("int", "this_ptr", ADDOF("this"))
+    VAR("int", "type_ptr", TAKE($this_ptr, 0, 8))
+    VAR("int", "data_ptr", TAKE($this_ptr, 8, 8))
+    BIND($data_ptr, "__LIST_DATA", "data")
+    $data.append($($type_ptr), $value)
+    RMSTK(ADDOF("value"))
+    UBIND("value")
+    UBIND("data")
+    #return (0)
+#endsection
+
+#section __LIST_DESTROY
+    VAR("int", "this_ptr", ADDOF("this"))
+    VAR("int", "type_ptr", TAKE($this_ptr, 0, 8))
+    VAR("int", "data_ptr", TAKE($this_ptr, 8, 8))
+
+    VAR("string", "type", $($type_ptr))
+    BIND($data_ptr, "__LIST_DATA", "data")
+
+    RMSTK($this_ptr)
+    RMSTK($type_ptr)
+    UBIND($this)
+
+    VAR("int", "element_count", ~(int, SIZEOF($data_ptr)) - 1 / 8)
+    VAR("int", "element_id", 0)
+    #while ($element_id < $element_count)
+        VAR("int", "element_ptr", TAKE($data_ptr, $element_id * 8 + 1, 8))
+        BIND($element_ptr, $type, "element")
+        $element.destroy
+        UBIND("element")
+        >element_id ($element_id + 1)
+    #end
+
+    RMSTK($data_ptr)
+    UBIND("data")
+#endsection
+
+#section __LIST_SIZE
+    VAR("int", "this_ptr", ADDOF("this"))
+    VAR("int", "data_ptr", TAKE($this_ptr, 8, 8))
+    BIND($data_ptr, "__LIST_DATA", "data")
+    VAR("int", "result", $data.size)
+    UBIND("data")
+    #return ($result)
+#endsection
+
+#section __LIST_CLONE
+    VAR("int", "this_ptr", ADDOF("this"))
+    VAR("int", "type_ptr", TAKE($this_ptr, 0, 8))
+    VAR("string", "type", $($type_ptr))
+
+    VAR("list", "new_list", CALL("mklist", $type))
+
+    VAR("int", "size", $this.size)
+    VAR("int", "i", 0)
+
+    #while ($i < $size)
+        $new_list.append ($this.at($i))
+        >i($i + 1)
+    #end
+
+    VAR("stack", "result", $new_list)
+    RMSTK(ADDOF("new_list"))
+    UBIND("new_list")
+    #return($result)
+#endsection
+
+#section __LIST_EDIT (int index, none value)
+    VAR("int", "this_ptr", ADDOF("this"))
+    VAR("int", "type_ptr", TAKE($this_ptr, 0, 8))
+    VAR("int", "data_ptr", TAKE($this_ptr, 8, 8))
+
+    VAR("string", "type", $($type_ptr))
+    BIND($data_ptr, "__LIST_DATA", "data")
+
+    $data.edit($type, $index, $value)
+
+    UBIND("data")
+    RMSTK(ADDOF("value"))
+    UBIND("value")
+    #return (0)
+#endsection
+
+#section __LIST_REMOVE (int index)
+    VAR("int", "this_ptr", ADDOF("this"))
+    VAR("int", "type_ptr", TAKE($this_ptr, 0, 8))
+    VAR("int", "data_ptr", TAKE($this_ptr, 8, 8))
+    VAR("string", "type", $($type_ptr))
+    BIND($data_ptr, "__LIST_DATA", "data")
+    $data.remove($type, $index)
+    UBIND("data")
+    #return (0)
+#endsection
+
+#type __LIST_DATA
+    #subsection at __LIST_DATA_AT
+    #subsection append __LIST_DATA_APPEND
+    #subsection size __LIST_DATA_SIZE
+    #subsection edit __LIST_DATA_EDIT
+    #subsection remove __LIST_DATA_REMOVE
+#endtype
+
+#section __LIST_DATA_AT (string type, int index)
+    VAR("int", "this_ptr", ADDOF("this"))
+    VAR("int", "result_ptr", TAKE($this_ptr, $index*8 + 1, 8))
+    VAR($type, "raw_result", $($result_ptr))
+    VAR($type, "result", $raw_result.clone)
+    VAR("int", "result_ptr", ADDOF("result"))
+    UBIND("result")
+    RMSTK(ADDOF("raw_result"))
+    UBIND("raw_result")
+    #return ($result_ptr)
+#endsection
+
+#section __LIST_DATA_APPEND (string type, none value)
+    VAR("int", "this_ptr", ADDOF("this"))
+    VAR($type, "raw_stored_value", $value)
+    RMSTK(ADDOF("value"))
+    UBIND("value")
+    VAR($type, "stored_value", $raw_stored_value.clone)
+    RMSTK(ADDOF("raw_stored_value"))
+    UBIND("raw_stored_value")
+    VAR("int", "stored_value_ptr", ADDOF("stored_value"))
+    UBIND("stored_value")
+    APPND($this_ptr, $stored_value_ptr)
+    #return (0)
+#endsection
+
+#section __LIST_DATA_SIZE
+    VAR("int", "this_ptr", ADDOF("this"))
+    VAR("int", "element_count", ~(int, SIZEOF($this_ptr)) - 1 / 8)
+    #return ($element_count)
+#endsection
+
+#section __LIST_DATA_EDIT (string type, int index, none value)
+    VAR("int", "this_ptr", ADDOF("this"))
+    VAR($type, "raw_stored_value", $value)
+    RMSTK(ADDOF("value"))
+    UBIND("value")
+    VAR($type, "stored_value", $raw_stored_value.clone)
+    RMSTK(ADDOF("raw_stored_value"))
+    UBIND("raw_stored_value")
+    VAR("int", "stored_value_ptr", ADDOF("stored_value"))
+    UBIND("stored_value")
+
+    BIND(TAKE($this_ptr, $index * 8 + 1, 8), $type, "old_value")
+    $old_value.destroy
+    UBIND("old_value")
+
+    PUSH($this_ptr, $index * 8 + 1, $stored_value_ptr)
+    #return (0)
+#endsection
+
+#section __LIST_DATA_REMOVE (string type, int index)
+    VAR("int", "this_ptr", ADDOF("this"))
+    BIND(TAKE($this_ptr, $index * 8 + 1, 8), $type, "value")
+    $value.destroy
+    UBIND("value")
+    VAR("int", "size", ~(int, $this.size))
+    VAR("int", "i", $index)
+    #while ($i < $size)
+        VAR("int", "next_ptr", TAKE($this_ptr, $i * 8 + 9, 8))
+        PUSH($this_ptr, $i * 8 +1, $next_ptr)
+        >i($i+1)
+    #end
+    STRIPE($this_ptr, 0, $size - 1 * 8 + 1)
+#endsection

@@ -1,0 +1,33 @@
+#type stack
+    #destroyer __JBASE_DEFAULT_DESTROYER
+#endtype
+
+#section __JBASE_DEFAULT_DESTROYER
+    RMSTK(ADDOF("this"))
+    UBIND("this")
+#endsection
+
+
+#type int
+    #destroyer __JBASE_DEFAULT_DESTROYER
+    #operator __JBASE_INT_OP
+
+    #subsection to_string __JBASE_INT_TO_STRING
+#endtype
+#section __JBASE_INT_OP (int first, int second, string operator)
+    VAR("int", "result", __INTOP($first, $second, $operator))
+    #return($result)
+#endsection
+#section __JBASE_INT_TO_STRING
+    VAR("string", "result", I_TS($this))
+    #return($result)
+#endsection
+
+#type string
+    #operator __JBASE_STRING_OP
+    #destroyer __JBASE_DEFAULT_DESTROYER
+#endtype
+#section __JBASE_STRING_OP (string first, string second, string operator)
+    VAR("string", "result", __STROP($first, $second, $operator))
+    #return($result)
+#endsection

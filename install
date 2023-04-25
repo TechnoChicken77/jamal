@@ -1,0 +1,19 @@
+#!/bin/sh
+
+install()
+{
+    echo Starting the install...
+    echo Removing old jamal binary...
+    rm -rf /usr/bin/jamal
+    echo Copying new binary...
+    cp -a build.d/jamal /usr/bin
+
+    echo Done!
+}
+
+if [ $(whoami) == "root" ]
+then
+    install
+else
+    sudo ./install
+fi
