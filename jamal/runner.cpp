@@ -118,9 +118,9 @@ namespace jamal_runner
             }
             else if(line[0] == '(')
             {
+                std::string inner_line;
                 long p_count = 1;
                 long len = line.size();
-                char buffer[line.size()];
                 for(int i = 1; i<len; i++)
                 {
                     char c = line[i];
@@ -128,9 +128,8 @@ namespace jamal_runner
                     else if (c == ')') (p_count--);
 
                     if(p_count == 0) break;
-                    else buffer[i] = c;
+                    else inner_line.push_back(c);
                 }
-                std::string inner_line(buffer);
                 result = run_expression(inner_line, data, variables);
             }
             else

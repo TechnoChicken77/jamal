@@ -71,7 +71,6 @@ namespace code_parsing
         expression_type get_type(std::string expression)
         {
             char identifier = expression[0];
-            std::cout << identifier << "\n";
             if(is_int(identifier)) //either int or float
             {
                 if(string_functions::split(expression, ' ').size() == 1) return expression_type::INT;
