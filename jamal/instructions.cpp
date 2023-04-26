@@ -1,6 +1,7 @@
 #include "jamal.hpp"
 #include "stacks.cpp"
 #include "message.cpp"
+#include "exceptions.cpp"
 #include <iostream>
 #include <cstring>
 
@@ -271,16 +272,11 @@ namespace instructions
             jamal::instruction_t instruction = data.instructions.at(name);
             result = instruction(args, data, variables);
         }
-        catch(const std::exception& e)
+        catch(std::exception& e)
         {
-            message::error(std::string(std::string(e.what()) + " while trying to run instruction \"" + name + "\"").c_str());
-            std::cout << "Arguments: \n";
-            for (auto &&a : args)
-            {
-                std::cout << "  ";
-                stacks::print_stack(a);
-            }
-        }
+            std::string exception_message = jamal_exceptions::append_exception_message(e.what(), "While trying to run instruction \"" + name + "\":");
+            throw jamal_exceptions::jamal_exception(exception_message);
+        }   
         return result;
     }
 }

@@ -5,45 +5,54 @@
 #include "message.cpp"
 #include "instructions.cpp"
 #include "runner.hpp"
+#include "exceptions.cpp"
 
 namespace jamal
 {
     stack run_section(std::string name, std::vector<stack> args, jamal_data& data, jamal::variable_map& variables, bool destroy_self)
     {
-        jamal::section this_section = data.sections.at(name);
-        std::vector<std::string> code = this_section.get_code();
-        int argc = args.size();
-
-        for(int i = 0; i < argc; i++)
+        try
         {
-            std::vector<std::string> parsed_arg = string_functions::split(this_section.args[i], ' ');
-            long new_var_stack = jamal::define_stack_in_vector(data.stacks);
-            data.stacks[new_var_stack] = args[i];
-            jamal::variable_data new_var_data {new_var_stack, parsed_arg[0]};
-            variables.emplace(jamal::variable_map::value_type(parsed_arg[1], new_var_data));
-        }
+            jamal::section this_section = data.sections.at(name);
+            std::vector<std::string> code = this_section.get_code();
+            int argc = args.size();
 
-        bool return_point = false;
-        stack result = jamal_runner::run_code_cluster(code, data, variables, return_point);
-        if(destroy_self)
-        {
-            for (auto &&var : variables)
+            for(int i = 0; i < argc; i++)
             {
-                if(var.second.type != "none" && var.first != "this")
+                std::vector<std::string> parsed_arg = string_functions::split(this_section.args[i], ' ');
+                long new_var_stack = jamal::define_stack_in_vector(data.stacks);
+                data.stacks[new_var_stack] = args[i];
+                jamal::variable_data new_var_data {new_var_stack, parsed_arg[0]};
+                variables.emplace(jamal::variable_map::value_type(parsed_arg[1], new_var_data));
+            }
+
+            bool return_point = false;
+            stack result = jamal_runner::run_code_cluster(code, data, variables, return_point);
+            if(destroy_self)
+            {
+                for (auto &&var : variables)
                 {
-                    jamal::type type = data.types.at(var.second.type);
-                    std::string destroyer_section_name = type.type_destroyer;
-                    if(destroyer_section_name != "none")
+                    if(var.second.type != "none" && var.first != "this")
                     {
-                        jamal::variable_map section_variables;
-                        jamal::variable_data this_var_data = var.second;
-                        section_variables.emplace(jamal::variable_map::value_type("this", this_var_data));
-                        run_section(type.type_destroyer, std::vector<jamal::stack>(), data, section_variables, true);
+                        jamal::type type = data.types.at(var.second.type);
+                        std::string destroyer_section_name = type.type_destroyer;
+                        if(destroyer_section_name != "none")
+                        {
+                            jamal::variable_map section_variables;
+                            jamal::variable_data this_var_data = var.second;
+                            section_variables.emplace(jamal::variable_map::value_type("this", this_var_data));
+                            run_section(type.type_destroyer, std::vector<jamal::stack>(), data, section_variables, true);
+                        }
                     }
                 }
             }
+            return result;
         }
-        return result;
+        catch(std::exception &e)
+        {
+            std::string exception_message = jamal_exceptions::append_exception_message(e.what(), "While trying to run section \"" + name + "\":");
+            throw jamal_exceptions::jamal_exception(exception_message.c_str());
+        }
     }
 }
 
@@ -166,69 +175,66 @@ namespace jamal_runner
                 }
                 else if(line[0] == '$') //is a reference to a variable
                 {
-                    std::string var_init(line.begin()+1, line.end());
-                    if(var_init[0] == '(') //id mode
+                    try
                     {
-                        var_init = std::string(var_init.begin()+1, var_init.end()-1);
-                        long address = stacks::to_long(run_expression(var_init, data, variables));
-                        if(address >= data.stacks.size()){message::error(std::string("adress " + std::to_string(address) + " is outside of existing data").c_str());}
-                        else
-                        {   try {result = data.stacks[address];}
-                            catch(const std::exception& e) {message::error(std::string("failed to load data from address " + std::to_string(address)).c_str());}
-                        }
-                    }
-                    else //init mode
-                    {
-                        std::vector<std::string> parsed_init = code_parsing::split_variable(var_init, data);
-
-                        if(parsed_init[1] == "self")
+                        std::string var_init(line.begin()+1, line.end());
+                        if(var_init[0] == '(') //id mode
                         {
-                            try {result = data.stacks[variables.at(parsed_init[0]).stack_address];}
-                            catch(const std::exception& e) {message::error(std::string("failed to load data from variable \"" + var_init + "\"").c_str());}
+                            var_init = std::string(var_init.begin()+1, var_init.end()-1);
+                            long address = stacks::to_long(run_expression(var_init, data, variables));
+                            if(address >= data.stacks.size()){throw jamal_exceptions::jamal_exception(std::string("Adress " + std::to_string(address) + " is outside of existing data").c_str());}
+                            else result = data.stacks[address];
                         }
-                        else if(parsed_init[1] == "destroy")
+                        else //init mode
                         {
-                            std::string var_name = parsed_init[0];
-                            jamal::type type = data.types.at(variables.at(var_name).type);
+                            std::vector<std::string> parsed_init = code_parsing::split_variable(var_init, data);
 
-                            if(type.type_destroyer != "none")
+                            if(parsed_init[1] == "self")
                             {
-                                jamal::variable_map destroyer_variables;
-                                jamal::variable_data this_var_data = variables.at(var_name);
-                                variables.erase(var_name);
-                                destroyer_variables.emplace(jamal::variable_map::value_type("this", this_var_data));
-
-                                run_section(type.type_destroyer, std::vector<jamal::stack>(), data, destroyer_variables, true);
+                                try {result = data.stacks[variables.at(parsed_init[0]).stack_address];}
+                                catch(const std::exception& e) {message::error(std::string("failed to load data from variable \"" + var_init + "\"").c_str());}
                             }
-                        }
-                        else if(parsed_init[1] == "clone")
-                        {
-                            jamal::variable_data var_data = variables.at(parsed_init[0]);
-                            std::string type_name = var_data.type;
-                            if(type_name == "none")
+                            else if(parsed_init[1] == "destroy")
                             {
-                                //just copy already existing data
-                                result = data.stacks[var_data.stack_address];
-                            }
-                            else
-                            {
-                                jamal::type type = data.types.at(type_name);
-                                std::string cloner_name = type.type_cloner;
-                                if(cloner_name == "none")
+                                std::string var_name = parsed_init[0];
+                                jamal::type type = data.types.at(variables.at(var_name).type);
+
+                                if(type.type_destroyer != "none")
                                 {
+                                    jamal::variable_map destroyer_variables;
+                                    jamal::variable_data this_var_data = variables.at(var_name);
+                                    variables.erase(var_name);
+                                    destroyer_variables.emplace(jamal::variable_map::value_type("this", this_var_data));
+
+                                    run_section(type.type_destroyer, std::vector<jamal::stack>(), data, destroyer_variables, true);
+                                }
+                            }
+                            else if(parsed_init[1] == "clone")
+                            {
+                                jamal::variable_data var_data = variables.at(parsed_init[0]);
+                                std::string type_name = var_data.type;
+                                if(type_name == "none")
+                                {
+                                    //just copy already existing data
                                     result = data.stacks[var_data.stack_address];
                                 }
                                 else
                                 {
-                                    jamal::variable_map cloner_variables;
-                                    cloner_variables.emplace(jamal::variable_map::value_type("this", var_data));
-                                    result = jamal::run_section(cloner_name, {}, data, cloner_variables, true);
+                                    jamal::type type = data.types.at(type_name);
+                                    std::string cloner_name = type.type_cloner;
+                                    if(cloner_name == "none")
+                                    {
+                                        result = data.stacks[var_data.stack_address];
+                                    }
+                                    else
+                                    {
+                                        jamal::variable_map cloner_variables;
+                                        cloner_variables.emplace(jamal::variable_map::value_type("this", var_data));
+                                        result = jamal::run_section(cloner_name, {}, data, cloner_variables, true);
+                                    }
                                 }
                             }
-                        }
-                        else
-                        {
-                            try 
+                            else
                             {
                                 jamal::variable_data var_data = variables.at(parsed_init[0]);
                                 jamal::stack raw_data = data.stacks[var_data.stack_address];
@@ -252,11 +258,15 @@ namespace jamal_runner
                                     jamal::variable_map subsection_variables;
                                     subsection_variables.emplace(jamal::variable_map::value_type("this", var_data));
                                     result = jamal::run_section(subsection_name, args, data, subsection_variables, true);;
-                                }
+                                }           
                             }
-                            catch(const std::exception& e) {message::error(std::string(std::string(e.what()) + " while trying to load data from variable \"" + parsed_init[0] + "\"").c_str());}              
                         }
                     }
+                    catch(const std::exception& e)
+                    {
+                        std::string exception_message = jamal_exceptions::append_exception_message(e.what(), "While trying to load data from \"" + line + "\":");
+                        throw jamal_exceptions::jamal_exception(exception_message.c_str());
+                    }   
                 }
                 else if(line[0] == '~') //is a type assumption for mathematical expressions
                 {
@@ -317,7 +327,8 @@ namespace jamal_runner
         }
         catch(const std::exception& e)
         {
-            message::error(std::string(std::string(e.what()) + " while trying to run expression: " + line).c_str());
+            std::string exception_message = jamal_exceptions::append_exception_message(e.what(), "While trying to run expression \"" + line + "\":");
+            throw jamal_exceptions::jamal_exception(exception_message.c_str());
         }
         return result;
     }
@@ -433,7 +444,7 @@ namespace jamal_runner
                     std::string expression = parsed_line[1];
                     i++;
                     std::vector<std::string> internal_code;
-                    long end_count = 1; //I want to kill myself sooooo bad
+                    long end_count = 1;
 
                     for(;i < line_count; i++)
                     {
@@ -533,15 +544,28 @@ namespace jamal_runner
         data.types = types;
         data.stacks = std::vector<jamal::stack>();
 
-        for (auto &&entry : entries)
+        std::string last_entry;
+        try
         {
-            jamal::variable_map variables;
-            //std::cout << "Calling entry: " << entry << '\n';
-            try {run_section(entry, std::vector<jamal::stack>(), data, variables, true);}
-            catch(const std::exception& e)
+            for (auto &&entry : entries)
             {
-                message::error(std::string("error while trying to call enrty \"" + entry + "\": " + e.what()).c_str());
+                last_entry = entry;
+                jamal::variable_map variables;
+                //std::cout << "Calling entry: " << entry << '\n';
+                try
+                {   
+                    run_section(entry, std::vector<jamal::stack>(), data, variables, true);
+                }
+                catch(jamal_exceptions::jamal_exception &e)
+                {
+                    std::string message = jamal_exceptions::append_exception_message(e.what(), "While trying to run entry \"" + last_entry + "\": ");
+                    throw jamal_exceptions::jamal_exception(message.c_str());
+                }
             }
+        }
+        catch(std::exception &e)
+        {
+            message::error(std::string("An error occured while trying to run the program: \n" + std::string(e.what())).c_str());
         }
         if(getenv("DEBUG") != nullptr && ((std::string)getenv("DEBUG") == "true"))
         {
