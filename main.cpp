@@ -27,4 +27,5 @@ int main(int argc, char** argv)
             jamal_runner::run_code(code);
         }
     }
+    
 }
