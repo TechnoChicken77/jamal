@@ -1,4 +1,5 @@
 #include <iostream>
+using namespace std;
 
 #include "jamal/jamal.cpp"
 #include "jamal/file-interactions.cpp"
@@ -10,13 +11,13 @@ int main(int argc, char** argv)
 {
     if(argc==1)
     {
-        std::cout << "Usage: " << argv[0] << " <code file path>\n";
+        cout << "Usage: " << argv[0] << " <code file path>\n";
         return -1;
     }
     else
     {
-        std::string path = argv[1];
-        std::string code = file::read_text(path);
+        string path = argv[1];
+        string code = file::read_text(path);
         if(code == "")
         {
             message::error("nothing to do");
