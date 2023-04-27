@@ -565,7 +565,14 @@ namespace jamal_runner
         }
         catch(std::exception &e)
         {
-            message::error(std::string("An error occured while trying to run the program: \n" + std::string(e.what())).c_str());
+            std::vector<std::string> lines = string_functions::split(e.what(), '\n');
+            std::string full_message;
+            for (auto &&l : lines)
+            {
+                full_message += "\n    " + l;
+            }
+            
+            message::error(std::string(std::string("An error occured while trying to run the program: ") + full_message).c_str());
         }
         if(getenv("DEBUG") != nullptr && ((std::string)getenv("DEBUG") == "true"))
         {

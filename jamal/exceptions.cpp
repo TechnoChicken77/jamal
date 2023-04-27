@@ -20,19 +20,7 @@ namespace jamal_exceptions
     };
     std::string append_exception_message(std::string base_message, std::string new_message)
     {
-        std::vector<std::string> base_message_lines = string_functions::split(base_message, '\n');
-        for (auto &&message_line : base_message_lines)
-        {
-            message_line = "    " + message_line;
-        }
-        std::string message;
-        for (auto &&message_line : base_message_lines)
-        {
-            message.append("\n");
-            message.append(message_line);
-        }
-        std::string result = new_message + message;
-        return result;
+        return new_message + '\n' + base_message;
     }
 }
 
