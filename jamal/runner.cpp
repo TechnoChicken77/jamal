@@ -506,7 +506,7 @@ namespace jamal_runner
         std::vector<std::string> entries;
         jamal::jamal_data data;
         jamal::type_map types;
-        try {parsed_code = code_parsing::parse_imports(code);}
+        try {parsed_code = code_parsing::parse_imports(code, "", data);}
         catch(const std::exception& e)
         {
             std::string error = e.what();

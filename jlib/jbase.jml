@@ -1,3 +1,5 @@
+@library jbase
+
 #type stack
     #destroyer __JBASE_DEFAULT_DESTROYER
 #endtype

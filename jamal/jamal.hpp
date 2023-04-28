@@ -68,7 +68,7 @@ namespace jamal
     };
     type::type()
     {
-        
+
     }
     const type empty_type;
     typedef std::map<std::string, type> type_map;
@@ -79,6 +79,7 @@ namespace jamal
 
     struct jamal_data
     {
+        std::vector<std::string> libraries;
         std::vector<stack> stacks;
         section_map sections;
         std::vector<std::string> entries;

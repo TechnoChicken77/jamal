@@ -1,3 +1,7 @@
+#import *jbase.jml
+
+@library lists
+
 #section mklist (string type)
     VAR("list", "new_list", ALLOC(16))
     $new_list.set_type($type)

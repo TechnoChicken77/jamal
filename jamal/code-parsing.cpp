@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 #include "exceptions.cpp"
 #include "file-interactions.cpp"
@@ -135,7 +136,7 @@ namespace code_parsing
         }
         return false;
     }
-    std::vector<std::string> parse_imports(std::string code, std::string path="")
+    std::vector<std::string> parse_imports(std::string code, std::string path, jamal::jamal_data& data)
     {
         std::vector<std::string> result;
         std::vector<std::string> code_lines = string_functions::split(code, '\n');
@@ -157,8 +158,20 @@ namespace code_parsing
                 }
                 std::string imported_code = file::read_text(import_path);
                 std::string path_of_import = file::path_of(import_path);
-                std::vector<std::string> parsed_import_code = parse_imports(imported_code, path_of_import);
+                std::vector<std::string> parsed_import_code = parse_imports(imported_code, path_of_import, data);
                 for (auto &&l : parsed_import_code) {result.push_back(l);}
+            }
+            else if(parsed_line[0] == "@library")
+            {
+                std::string lib_name = parsed_line[1];
+                if(std::find(data.libraries.begin(), data.libraries.end(), lib_name) == data.libraries.end())
+                {
+                    data.libraries.push_back(lib_name);
+                }
+                else
+                {
+                    break;
+                }
             }
             else{result.push_back(string_functions::stripe_spaces(line));}
         }
