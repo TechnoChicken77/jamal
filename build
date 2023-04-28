@@ -8,6 +8,15 @@ echo cleaning previous build...
 rm -rf build.d
 mkdir build.d
 echo building...
+if [ "$CXX" = "clang++" ]
+then
 $($CXX -Ofast -flto=thin main.cpp -o build.d/jamal)
+elif [ "$CXX" = "g++" ]
+then
+    $($CXX -Ofast main.cpp -o build.d/jamal)
+else
+    $($CXXC main.cpp -o build.d/jamal)
+fi
+
 chmod +x build.d/jamal
 echo done!

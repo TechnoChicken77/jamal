@@ -30,18 +30,26 @@ namespace string_functions
     std::string parse_import_path(std::string path)
     {
         std::string result;
-        int len = path.size();
-        for(int i = 0; i < len; i++)
+        if(path[0] == '*')
         {
-            char c = path[i];
-            if(c == '\\')
-            {
-                if(path[i+1] == 's') {result += ' ';}
-                else {result += path[i+1];}
-                i++;
-            }
-            else {result += c;}
+            result = "/etc/jamal/jlib-default/" + path.substr(1);
         }
+        else
+        {
+            int len = path.size();
+            for(int i = 0; i < len; i++)
+            {
+                char c = path[i];
+                if(c == '\\')
+                {
+                    if(path[i+1] == 's') {result += ' ';}
+                    else {result += path[i+1];}
+                    i++;
+                }
+                else {result += c;}
+            }
+        }
+        //std::cout << "Importing " << result << '\n';
         return result;
     }
     std::string remove_front_spaces(std::string s)

@@ -7,6 +7,11 @@ install()
     rm -rf /usr/bin/jamal
     echo Copying new binary...
     cp -a build.d/jamal /usr/bin
+    echo Removing old built-in libraries
+    mkdir /etc/jamal
+    rm -rf /etc/jamal/jlib-default
+    echo Copiying new libraries
+    cp -r jlib /etc/jamal/jlib-default
 
     echo Done!
 }
