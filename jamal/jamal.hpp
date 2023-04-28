@@ -11,6 +11,16 @@ namespace jamal
     {
         VARIABLE, SUBSECTION
     };
+    enum operator_action_type
+    {
+        SECTION, INSTRUCTION
+    };
+    struct operator_data
+    {
+        operator_action_type action_type;
+        std::string action_name;
+    };
+    
     typedef std::vector<u_char> stack;
     typedef std::map<int, std::string> member_map;
 
@@ -49,11 +59,17 @@ namespace jamal
     public:
         type_member_map members;
         subsection_map subsections;
-        std::string type_operator;
+        operator_data type_operator;
         std::string type_destroyer = "none";
         std::string type_cloner = "none";
         member_type_map member_types;
+
+        type();
     };
+    type::type()
+    {
+        
+    }
     const type empty_type;
     typedef std::map<std::string, type> type_map;
     typedef std::map<std::string, variable_data> variable_map;

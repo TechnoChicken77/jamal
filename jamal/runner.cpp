@@ -112,15 +112,20 @@ namespace jamal_runner
                         i++;
                         std::string next_expression = expression_elements[i];
                         jamal::stack next_expression_value = run_expression(next_expression, data, variables);
+                        jamal::operator_data op_data = data.types.at(element_type_name).type_operator;
 
-                        std::vector<jamal::stack> argv = {value_buffer, next_expression_value, stacks::string_to_stack(element)};
-
-                        jamal::variable_map op_section_variables;
-
-                        jamal::type element_type = data.types.at(element_type_name);
-                        std::string op_section_name = element_type.type_operator;
-
-                        value_buffer = jamal::run_section(op_section_name, argv, data, op_section_variables, true);
+                        switch (op_data.action_type)
+                        {
+                        case jamal::operator_action_type::INSTRUCTION:
+                            value_buffer = instructions::run_instruction(op_data.action_name, data, {value_buffer, next_expression_value, stacks::string_to_stack(element)}, variables);
+                            break;
+                        case jamal::operator_action_type::SECTION:
+                            std::vector<jamal::stack> argv = {value_buffer, next_expression_value, stacks::string_to_stack(element)};
+                            std::string op_section_name = op_data.action_name;
+                            jamal::variable_map op_section_variables;
+                            value_buffer = jamal::run_section(op_section_name, argv, data, op_section_variables, true);
+                            break;
+                        }
                     }
                 }
                 result = value_buffer;
@@ -338,7 +343,7 @@ namespace jamal_runner
         int line_count = code.size();
         for(int i = 0; i < line_count; i++)
         {
-            std::string line = string_functions::remove_front_spaces(code[i]);
+            std::string line = code[i];
             if(line[0] == '#') //The code line is detected to be a special instruction
             {
                 std::vector<std::string> parsed_line = code_parsing::get_instruction_name_and_args(line);
@@ -552,15 +557,7 @@ namespace jamal_runner
                 last_entry = entry;
                 jamal::variable_map variables;
                 //std::cout << "Calling entry: " << entry << '\n';
-                try
-                {   
-                    run_section(entry, std::vector<jamal::stack>(), data, variables, true);
-                }
-                catch(jamal_exceptions::jamal_exception &e)
-                {
-                    std::string message = jamal_exceptions::append_exception_message(e.what(), "While trying to run entry \"" + last_entry + "\": ");
-                    throw jamal_exceptions::jamal_exception(message.c_str());
-                }
+                run_section(entry, std::vector<jamal::stack>(), data, variables, true);
             }
         }
         catch(std::exception &e)

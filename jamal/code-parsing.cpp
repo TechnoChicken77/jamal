@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+#include "exceptions.cpp"
 #include "file-interactions.cpp"
 #include "string-functions.cpp"
 #include "jamal.cpp"
@@ -48,7 +49,23 @@ namespace code_parsing
                     }
                     else if(parsed_line[0] == "#operator")
                     {
-                        result.type_operator = parsed_line[1];
+                        std::string operator_type = parsed_line[1];
+                        jamal::operator_action_type operator_action;
+                        std::string operator_name = parsed_line[2];
+                        
+                        if(operator_type == "section")
+                        {
+                            operator_action = jamal::operator_action_type::SECTION;
+                        }
+                        else if(operator_type == "instruction")
+                        {
+                            operator_action = jamal::operator_action_type::INSTRUCTION;
+                        }
+                        else
+                        {
+                            throw jamal_exceptions::jamal_exception("unknown operator type \"" + operator_type + "\"");
+                        }
+                        result.type_operator = {operator_action, operator_name};
                     }
                     else if(parsed_line[0] == "#destroyer")
                     {
@@ -143,7 +160,7 @@ namespace code_parsing
                 std::vector<std::string> parsed_import_code = parse_imports(imported_code, path_of_import);
                 for (auto &&l : parsed_import_code) {result.push_back(l);}
             }
-            else{result.push_back(line);}
+            else{result.push_back(string_functions::stripe_spaces(line));}
         }
         return result;
     }
