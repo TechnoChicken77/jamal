@@ -34,7 +34,7 @@ namespace jamal
                 {
                     if(var.second.type != "none" && var.first != "this")
                     {
-                        jamal::type type = data.types.at(var.second.type);
+                        jamal::type type = data.type_vector->at(data.types.at(var.second.type));
                         std::string destroyer_section_name = type.type_destroyer;
                         if(destroyer_section_name != "none")
                         {
@@ -58,7 +58,7 @@ namespace jamal
 
 namespace jamal_runner
 {
-    jamal::stack run_expression(std::string line, jamal::jamal_data& data, jamal::variable_map& variables)
+    jamal::stack run_expression(std::string& line, jamal::jamal_data& data, jamal::variable_map& variables)
     {
         jamal::stack result;
         try
@@ -112,7 +112,7 @@ namespace jamal_runner
                         i++;
                         std::string next_expression = expression_elements[i];
                         jamal::stack next_expression_value = run_expression(next_expression, data, variables);
-                        jamal::operator_data op_data = data.types.at(element_type_name).type_operator;
+                        jamal::operator_data op_data = (data.type_vector->at(data.types.at(element_type_name))).type_operator;
 
                         switch (op_data.action_type)
                         {
@@ -202,7 +202,7 @@ namespace jamal_runner
                             else if(parsed_init[1] == "destroy")
                             {
                                 std::string var_name = parsed_init[0];
-                                jamal::type type = data.types.at(variables.at(var_name).type);
+                                jamal::type type = data.type_vector->at(data.types.at(variables.at(var_name).type));
 
                                 if(type.type_destroyer != "none")
                                 {
@@ -225,7 +225,7 @@ namespace jamal_runner
                                 }
                                 else
                                 {
-                                    jamal::type type = data.types.at(type_name);
+                                    jamal::type type = data.type_vector->at(data.types.at(type_name));
                                     std::string cloner_name = type.type_cloner;
                                     if(cloner_name == "none")
                                     {
@@ -245,15 +245,15 @@ namespace jamal_runner
                                 jamal::stack raw_data = data.stacks[var_data.stack_address];
                                 std::string type = var_data.type;
                                 std::string referenced_member = parsed_init[1];
-                                jamal::member_type referenced_member_type = data.types.at(type).member_types.at(referenced_member);
+                                jamal::member_type referenced_member_type = (data.type_vector->at(data.types.at(type))).member_types.at(referenced_member);
                                 if (referenced_member_type == jamal::member_type::VARIABLE)
                                 {
-                                    jamal::type_member_data tmd {data.types.at(type).members.at(referenced_member)};
+                                    jamal::type_member_data tmd {(data.type_vector->at(data.types.at(type))).members.at(referenced_member)};
                                     result = std::vector<u_char>(raw_data.begin()+tmd.start_pos, raw_data.begin()+tmd.length-1);
                                 }
                                 else if(referenced_member_type == jamal::member_type::SUBSECTION)
                                 {
-                                    std::string subsection_name = data.types.at(type).subsections.at(referenced_member);
+                                    std::string subsection_name = (data.type_vector->at(data.types.at(type))).subsections.at(referenced_member);
                                     std::vector<jamal::stack> args;
                                     std::vector<std::string> raw_args = code_parsing::split_arguments(parsed_init[2]);
                                     for (auto &&raw_arg : raw_args)
@@ -337,7 +337,7 @@ namespace jamal_runner
         }
         return result;
     }
-    jamal::stack run_code_cluster(std::vector<std::string> code, jamal::jamal_data& data, jamal::variable_map& variables, bool& return_point)
+    jamal::stack run_code_cluster(std::vector<std::string>& code, jamal::jamal_data& data, jamal::variable_map& variables, bool& return_point)
     {
         jamal::stack result;
         int line_count = code.size();
@@ -505,7 +505,8 @@ namespace jamal_runner
         jamal::section_map sections;
         std::vector<std::string> entries;
         jamal::jamal_data data;
-        jamal::type_map types;
+        jamal::type_index_map types;
+        std::vector<jamal::type> typev;
         try {parsed_code = code_parsing::parse_imports(code, "", data);}
         catch(const std::exception& e)
         {
@@ -530,7 +531,7 @@ namespace jamal_runner
             message::error(error.c_str());
             return;
         }
-        try {types = code_parsing::parse_types(parsed_code);}
+        try {types = code_parsing::parse_types(parsed_code, typev);}
         catch(const std::exception& e)
         {
             std::string error = e.what();
@@ -546,6 +547,7 @@ namespace jamal_runner
         data.entries = entries;
         data.sections = sections;
         data.instructions = instructions;
+        data.type_vector = &typev;
         data.types = types;
         data.stacks = std::vector<jamal::stack>();
 

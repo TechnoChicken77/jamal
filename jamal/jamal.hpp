@@ -71,7 +71,9 @@ namespace jamal
 
     }
     const type empty_type;
-    typedef std::map<std::string, type> type_map;
+
+    typedef std::vector<type> typev;
+    typedef std::map<std::string, int> type_index_map;
     typedef std::map<std::string, variable_data> variable_map;
 
     typedef stack (*instruction_t)(std::vector<stack> args, jamal_data& data, variable_map& variables);
@@ -84,7 +86,8 @@ namespace jamal
         section_map sections;
         std::vector<std::string> entries;
         instruction_map instructions;
-        type_map types;
+        std::vector<type>* type_vector;
+        type_index_map types;
     };
 
     long define_stack_in_vector(std::vector<stack>& vec);

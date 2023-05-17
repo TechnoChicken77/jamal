@@ -227,10 +227,11 @@ namespace code_parsing
         }
         return result;
     }
-    jamal::type_map parse_types(std::vector<std::string> code)
+    jamal::type_index_map parse_types(std::vector<std::string> code, std::vector<jamal::type>& typev)
     {
-        jamal::type_map result;
+        jamal::type_index_map result;
         int len = code.size();
+        int type_id = -1;
         for(int i = 0; i<len; i++)
         {
             std::string line = code[i];
@@ -250,8 +251,10 @@ namespace code_parsing
                         type_code_lines.push_back(type_code_line);
                     }
                     //all of type code was separated at this point
+                    type_id++;
                     jamal::type type = types::parse_type(type_code_lines);
-                    result.emplace(jamal::type_map::value_type(parsed_line[1], type));
+                    typev.push_back(type);
+                    result.emplace(jamal::type_index_map::value_type(parsed_line[1], type_id));
                 }
             }
         }
