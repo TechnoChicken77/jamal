@@ -6,24 +6,24 @@
 
 namespace string_functions
 {
-    std::vector<std::string> split(std::string s, char c)
+    std::vector<std::string> split(std::string* s, char c)
     {
         std::vector<std::string> result;
-        int len = s.size();
+        int len = (*s).size();
         int last_split = 0;
         int i = 0;
         for(;i < len; i++)
         {
-            char current_c = s[i];
+            char current_c = (*s)[i];
             if(current_c == c)
             {
                 int split_len = i - last_split;
-                if(split_len != 0) result.push_back(s.substr(last_split, split_len));
+                if(split_len != 0) result.push_back((*s).substr(last_split, split_len));
                 last_split = i+1;
             }
         }
         int split_len = i - last_split;
-        if(split_len != 0) result.push_back(s.substr(last_split, split_len));
+        if(split_len != 0) result.push_back((*s).substr(last_split, split_len));
         last_split = i + 1;
         return result;
     }

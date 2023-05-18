@@ -24,7 +24,7 @@ namespace instructions
     jamal::stack remove_stack(std::vector<jamal::stack> args, jamal::jamal_data& data, jamal::variable_map& variables)
     {
         long stack_id = stacks::to_long(args[0]);
-        jamal::empty_stack_in_vector(data.stacks, stack_id);
+        jamal::empty_stack_in_vector((*data.stacks), stack_id);
         return jamal::stack();
     }
     jamal::stack int_to_string(std::vector<jamal::stack> args, jamal::jamal_data& data, jamal::variable_map& variables)
@@ -41,11 +41,7 @@ namespace instructions
     }
     jamal::stack out(std::vector<jamal::stack> args, jamal::jamal_data& data, jamal::variable_map& variables)
     {
-        std::string msg;
-        for (auto &&c : args[0])
-        {
-            msg.push_back(c);
-        }
+        std::string msg = stacks::to_string(args.at(0));
         std::cout << msg;
         jamal::stack result;
         return result;
@@ -59,11 +55,11 @@ namespace instructions
         bool existed_before = false;
 
         long stack_id;
-        if(variables.find(name) == variables.end()) {stack_id = jamal::define_stack_in_vector(data.stacks);}
+        if(variables.find(name) == variables.end()) {stack_id = jamal::define_stack_in_vector((*data.stacks));}
         else{stack_id = variables.at(name).stack_address; existed_before = true;}
         if(!existed_before)
         {
-            data.stacks[stack_id] = value;
+            (*data.stacks)[stack_id] = value;
             variables.emplace(jamal::variable_map::value_type(name, jamal::variable_data{stack_id, type}));
         }
         else
@@ -74,7 +70,7 @@ namespace instructions
             }
             else
             {
-                data.stacks[stack_id] = value;
+                (*data.stacks)[stack_id] = value;
             }
         }
         return stacks::long_to_stack(stack_id);
@@ -166,7 +162,7 @@ namespace instructions
         long stack_adress = stacks::to_long(args[1]);
         long len = stacks::to_long(args[2]);
 
-        jamal::stack stack = data.stacks[variable_address];
+        jamal::stack stack = (*data.stacks)[variable_address];
         jamal::stack element = jamal::stack(stack.begin() + stack_adress, stack.begin() + stack_adress + len);
         return element;
     }
@@ -176,14 +172,14 @@ namespace instructions
         long stack_adress = stacks::to_long(args[1]);
         jamal::stack value = args[2];
 
-        jamal::stack stack = data.stacks[variable_address];
+        jamal::stack stack = (*data.stacks)[variable_address];
 
         long len = value.size();
         for(int i = 0; i < len; i++)
         {
             stack[stack_adress+i] = value[i];
         }
-        data.stacks[variable_address] = stack;
+        (*data.stacks)[variable_address] = stack;
         return stack;
     }
     jamal::stack unbind(std::vector<jamal::stack> args, jamal::jamal_data& data, jamal::variable_map& variables)
@@ -209,7 +205,7 @@ namespace instructions
 
         for (auto &&c : value)
         {
-            data.stacks[stack_id].push_back(c);
+            (*data.stacks)[stack_id].push_back(c);
         }
 
         return stacks::long_to_stack(0);
@@ -235,7 +231,7 @@ namespace instructions
         long begin = stacks::to_long(args[1]);
         long end = stacks::to_long(args[2]);
 
-        data.stacks[ptr] = jamal::stack(data.stacks[ptr].begin()+begin, data.stacks[ptr].begin() + end);
+       (*data.stacks)[ptr] = jamal::stack((*data.stacks)[ptr].begin()+begin, (*data.stacks)[ptr].begin() + end);
         return stacks::long_to_stack(0);
     }
     jamal::stack input(std::vector<jamal::stack> args, jamal::jamal_data& data, jamal::variable_map& variables)
@@ -264,13 +260,13 @@ namespace instructions
         i_map.emplace(jamal::instruction_map::value_type("STRIPE", stripe));
         i_map.emplace(jamal::instruction_map::value_type("IN", input));
     }
-    jamal::stack run_instruction(std::string name, jamal::jamal_data& data, std::vector<jamal::stack> args, jamal::variable_map& variables)
+    jamal::stack run_instruction(std::string name, jamal::jamal_data& data, std::vector<jamal::stack> args, jamal::variable_map* variables)
     {
         jamal::stack result;
         try
         {
-            jamal::instruction_t instruction = data.instructions.at(name);
-            result = instruction(args, data, variables);
+            jamal::instruction_t instruction = (*data.instructions).at(name);
+            result = instruction(args, data, (*variables));
         }
         catch(std::exception& e)
         {

@@ -18,7 +18,7 @@ namespace file
     std::string path_of(std::string path)
     {
         std::string result;
-        std::vector<std::string> splitted_path = string_functions::split(path, '/');
+        std::vector<std::string> splitted_path = string_functions::split(&path, '/');
         int folder_count = splitted_path.size()-1;
         if(path[0] == '/') result += '/';
         else{if(folder_count == 0) return("");}

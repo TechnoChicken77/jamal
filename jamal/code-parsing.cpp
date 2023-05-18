@@ -15,7 +15,7 @@ namespace code_parsing
 {
     bool is_int(char c);
     bool is_op(char c);
-    std::vector<std::string> split_variable(std::string initializer, jamal::jamal_data data);
+    std::vector<std::string> split_variable(std::string* initializer);
     namespace types
     {
         enum expression_type
@@ -31,7 +31,7 @@ namespace code_parsing
                 std::string line = code[i];
                 if(line[0] == '#')
                 {
-                    std::vector<std::string> parsed_line = string_functions::split(line, ' ');
+                    std::vector<std::string> parsed_line = string_functions::split(&line, ' ');
                     if(parsed_line[0] == "#member")
                     {
                         std::string member_name = parsed_line[1];
@@ -86,9 +86,9 @@ namespace code_parsing
             }
             return result;
         }
-        expression_type get_type(std::string expression)
+        expression_type get_type(std::string* expression)
         {
-            char identifier = expression[0];
+            char identifier = (*expression)[0];
             if(is_int(identifier)) //either int or float
             {
                 if(string_functions::split(expression, ' ').size() == 1) return expression_type::INT;
@@ -101,11 +101,11 @@ namespace code_parsing
             //bruh those comments above this one are as useless as this one
             else return expression_type::NULLTYPE;
         }
-        std::string get_variable_type(std::string variable, jamal::jamal_data data, jamal::variable_map variables)
+        std::string get_variable_type(std::string* variable, jamal::variable_map* variables)
         {
-            std::vector<std::string> parsed_variable = split_variable(variable, data);
+            std::vector<std::string> parsed_variable = split_variable(variable);
             std::string name = parsed_variable[0];
-            jamal::variable_data parent_data = variables.at(name);
+            jamal::variable_data parent_data = (*variables).at(name);
             if(parsed_variable[1] == "self")
             {
                 return parent_data.type;
@@ -116,7 +116,7 @@ namespace code_parsing
             }
         }
     };
-    std::vector<std::string> get_instruction_name_and_args(std::string line);
+    std::vector<std::string> get_instruction_name_and_args(std::string* line);
     std::vector<std::string> split_arguments(std::string arg_line);
     bool is_int(char c)
     {
@@ -136,15 +136,15 @@ namespace code_parsing
         }
         return false;
     }
-    std::vector<std::string> parse_imports(std::string code, std::string path, jamal::jamal_data& data)
+    std::vector<std::string> parse_imports(std::string code, std::string path, std::vector<std::string>& libraries)
     {
         std::vector<std::string> result;
-        std::vector<std::string> code_lines = string_functions::split(code, '\n');
+        std::vector<std::string> code_lines = string_functions::split(&code, '\n');
         int line_count = code_lines.size();
         for(int i = 0; i < line_count; i++)
         {
             std::string line = code_lines[i];
-            std::vector<std::string> parsed_line = string_functions::split(line, ' ');
+            std::vector<std::string> parsed_line = string_functions::split(&line, ' ');
             if(parsed_line[0][0] == '/')
             {
                 //do nothing, it's a fucking comment
@@ -158,15 +158,15 @@ namespace code_parsing
                 }
                 std::string imported_code = file::read_text(import_path);
                 std::string path_of_import = file::path_of(import_path);
-                std::vector<std::string> parsed_import_code = parse_imports(imported_code, path_of_import, data);
+                std::vector<std::string> parsed_import_code = parse_imports(imported_code, path_of_import, libraries);
                 for (auto &&l : parsed_import_code) {result.push_back(l);}
             }
             else if(parsed_line[0] == "@library")
             {
                 std::string lib_name = parsed_line[1];
-                if(std::find(data.libraries.begin(), data.libraries.end(), lib_name) == data.libraries.end())
+                if(std::find(libraries.begin(), libraries.end(), lib_name) == libraries.end())
                 {
-                    data.libraries.push_back(lib_name);
+                    libraries.push_back(lib_name);
                 }
                 else
                 {
@@ -184,7 +184,7 @@ namespace code_parsing
         for (int i = 0; i < code_len; i++)
         {
             std::string line = code[i];
-            std::vector<std::string> parsed_line = string_functions::split(line, ' ');
+            std::vector<std::string> parsed_line = string_functions::split(&line, ' ');
             if(parsed_line[0] == "#section")
             {
                 i++;
@@ -192,13 +192,13 @@ namespace code_parsing
                 std::string section_name = parsed_line[1];
                 for(;i<code_len;i++)
                 {
-                    std::vector<std::string> section_line = string_functions::split(code[i], ' ');
+                    std::vector<std::string> section_line = string_functions::split(&code[i], ' ');
                     if(section_line[0] == "#endsection") break;
                     section_code.push_back(string_functions::remove_front_spaces(code[i]));
                 }
                 jamal::section section;
                 section.insert_code(section_code);
-                std::string args = get_instruction_name_and_args(line)[1];
+                std::string args = get_instruction_name_and_args(&line)[1];
                 std::vector<std::string> parsed_args = split_arguments(args);
                 for (auto &&a : parsed_args)
                 {
@@ -220,7 +220,7 @@ namespace code_parsing
             std::string parsed_line = string_functions::remove_front_spaces(code[i]);
             if(parsed_line[0] == '@') if (parsed_line == "@entry")
             {
-                std::string entry = string_functions::split(code[i+1], ' ')[1];
+                std::string entry = string_functions::split(&code[i+1], ' ')[1];
                 //std::cout << "Found entry: " << entry << '\n';
                 result.push_back(entry);
             }
@@ -237,7 +237,7 @@ namespace code_parsing
             std::string line = code[i];
             if(line[0] == '#')
             {
-                std::vector<std::string> parsed_line = string_functions::split(line, ' ');
+                std::vector<std::string> parsed_line = string_functions::split(&line, ' ');
                 if(parsed_line[0] == "#type")
                 {
                     std::vector<std::string> type_code_lines;
@@ -260,10 +260,10 @@ namespace code_parsing
         }
         return result;
     }
-    std::vector<std::string> get_instruction_name_and_args(std::string line)
+    std::vector<std::string> get_instruction_name_and_args(std::string* line)
     {
         std::vector<std::string> result = {"", ""};
-        int len = line.size();
+        int len = (*line).size();
         bool has_name = false;
         bool has_args = false;
 
@@ -275,7 +275,7 @@ namespace code_parsing
 
         for(int i = 0; i<len; i++)
         {
-            char c = line[i];
+            char c = (*line)[i];
 
             switch (c)
             {
@@ -304,16 +304,16 @@ namespace code_parsing
                 }
                 break;
             case '"':
-                if(line[i-1] != '\\') in_str = !in_str;
+                if((*line)[i-1] != '\\') in_str = !in_str;
                 break;
             }
         }
         if(has_args)
         {
-            result[0] = string_functions::remove_front_spaces(string_functions::remove_back_spaces(line.substr(0, arg_start-1)));
-            result[1] = string_functions::remove_front_spaces(string_functions::remove_back_spaces(line.substr(arg_start, arg_len)));
+            result[0] = string_functions::remove_front_spaces(string_functions::remove_back_spaces((*line).substr(0, arg_start-1)));
+            result[1] = string_functions::remove_front_spaces(string_functions::remove_back_spaces((*line).substr(arg_start, arg_len)));
         }
-        else {result[0] = string_functions::remove_front_spaces(string_functions::remove_back_spaces(line));}
+        else {result[0] = string_functions::remove_front_spaces(string_functions::remove_back_spaces((*line)));}
         return result;
     }
     std::vector<std::string> split_arguments(std::string arg_line)
@@ -365,13 +365,13 @@ namespace code_parsing
         
         return result;
     }
-    std::vector<std::string> parse_math_expression(std::string expression)
+    std::vector<std::string> parse_math_expression(std::string* expression)
     {
         std::vector<std::string> result;
 
         long p_count = 0;
         bool in_str = false;
-        long len = expression.size();
+        long len = (*expression).size();
         bool in_operator = false;
 
         int element_begin = 0;
@@ -379,10 +379,10 @@ namespace code_parsing
 
         for(int i = 0; i < len; i++)
         {
-            char c = expression[i];
+            char c = (*expression)[i];
             if(c == '(') p_count++;
             else if(c == ')') p_count--;
-            else if(c == '"' && expression[i-1] != '\\') in_str = !in_str;
+            else if(c == '"' && (*expression)[i-1] != '\\') in_str = !in_str;
 
             if(in_operator)
             {
@@ -391,7 +391,7 @@ namespace code_parsing
                 {
                     in_operator = false;
                     i--;
-                    if(element_size > 0)result.push_back(string_functions::stripe_spaces(expression.substr(element_begin, element_size)));
+                    if(element_size > 0)result.push_back(string_functions::stripe_spaces((*expression).substr(element_begin, element_size)));
                     element_begin = i + 1;
                     element_size = 0;
                 }
@@ -402,22 +402,22 @@ namespace code_parsing
                 {
                     in_operator = true;
                     i--;
-                    if(element_size > 0)result.push_back(string_functions::stripe_spaces(expression.substr(element_begin, element_size)));
+                    if(element_size > 0)result.push_back(string_functions::stripe_spaces((*expression).substr(element_begin, element_size)));
                     element_begin = i + 1;
                     element_size = 0;
                 }
                 else{element_size++;}
             }
         }
-        if(element_size > 0)result.push_back(string_functions::stripe_spaces(expression.substr(element_begin, element_size)));
+        if(element_size > 0)result.push_back(string_functions::stripe_spaces((*expression).substr(element_begin, element_size)));
 
         return result;
     }
-    std::vector<std::string> split_variable(std::string initializer, jamal::jamal_data data)
+    std::vector<std::string> split_variable(std::string* initializer)
     {
         std::vector<std::string> result;
         std::vector<std::string> parsed_init = get_instruction_name_and_args(initializer);
-        std::vector<std::string> init_members = string_functions::split(parsed_init[0], '.');
+        std::vector<std::string> init_members = string_functions::split(&parsed_init[0], '.');
         int init_member_count = init_members.size();
         if(init_member_count == 1)
         {
@@ -431,7 +431,7 @@ namespace code_parsing
             result.push_back(init_members[1]);
             result.push_back(parsed_init[1]);
         }
-        else {message::error(std::string("bad variable init: " + initializer).c_str());}
+        else {message::error(std::string("bad variable init: " + *initializer).c_str());}
 
         return result;
     }

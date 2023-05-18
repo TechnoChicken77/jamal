@@ -13,15 +13,15 @@ namespace jamal
     {
         try
         {
-            jamal::section this_section = data.sections.at(name);
+            jamal::section this_section = data.sections->at(name);
             std::vector<std::string> code = this_section.get_code();
             int argc = args.size();
 
             for(int i = 0; i < argc; i++)
             {
-                std::vector<std::string> parsed_arg = string_functions::split(this_section.args[i], ' ');
-                long new_var_stack = jamal::define_stack_in_vector(data.stacks);
-                data.stacks[new_var_stack] = args[i];
+                std::vector<std::string> parsed_arg = string_functions::split(&this_section.args[i], ' ');
+                long new_var_stack = jamal::define_stack_in_vector((*data.stacks));
+                (*data.stacks)[new_var_stack] = args[i];
                 jamal::variable_data new_var_data {new_var_stack, parsed_arg[0]};
                 variables.emplace(jamal::variable_map::value_type(parsed_arg[1], new_var_data));
             }
@@ -34,7 +34,7 @@ namespace jamal
                 {
                     if(var.second.type != "none" && var.first != "this")
                     {
-                        jamal::type type = data.type_vector->at(data.types.at(var.second.type));
+                        jamal::type type = data.type_vector->at((*data.types).at(var.second.type));
                         std::string destroyer_section_name = type.type_destroyer;
                         if(destroyer_section_name != "none")
                         {
@@ -58,7 +58,7 @@ namespace jamal
 
 namespace jamal_runner
 {
-    jamal::stack run_expression(std::string& line, jamal::jamal_data& data, jamal::variable_map& variables)
+    jamal::stack run_expression(std::string* line, jamal::jamal_data* data, jamal::variable_map* variables)
     {
         jamal::stack result;
         try
@@ -66,7 +66,7 @@ namespace jamal_runner
             using code_parsing::types::expression_type;
             std::vector<std::string> expression_elements = code_parsing::parse_math_expression(line);
             long element_count = expression_elements.size();
-            if(element_count >= 3 && line[0] != '>')
+            if(element_count >= 3 && (*line)[0] != '>')
             {
                 jamal::stack value_buffer;
                 std::string element_type_name;
@@ -74,36 +74,38 @@ namespace jamal_runner
                 for(int i = 0; i < element_count; i++)
                 {
                     std::string element = expression_elements[i];
-                    expression_type raw_element_type = code_parsing::types::get_type(element);
+                    expression_type raw_element_type = code_parsing::types::get_type(&element);
                     jamal::stack element_value;
+                    std::string init_name;
 
                     switch (raw_element_type)
                     {
                     //no type specified
                     case expression_type::NULLTYPE:
-                        message::error(std::string("could not recognize type of \"" + element + "\" in " + line).c_str());
+                        message::error(std::string("could not recognize type of \"" + element + "\" in " + (*line)).c_str());
                         break;
                     //correct types
                     case expression_type::INT:
                         element_type_name = "int";
-                        element_value = run_expression(element, data, variables);
+                        element_value = run_expression(&element, data, variables);
                         break;
                     case expression_type::STRING:
-                        element_value = run_expression(element, data, variables);
+                        element_value = run_expression(&element, data, variables);
                         element_type_name = "string";
                         break;
                     case expression_type::FLOAT:
-                        element_value = run_expression(element, data, variables);
+                        element_value = run_expression(&element, data, variables);
                         element_type_name = "float";
                         break;
                     case expression_type::VARIABLE:
-                        element_value = run_expression(element, data, variables);
-                        element_type_name = code_parsing::types::get_variable_type(element.substr(1), data, variables);
+                        element_value = run_expression(&element, data, variables);
+                        init_name = element.substr(1);
+                        element_type_name = code_parsing::types::get_variable_type(&init_name, variables);
                         break;
                     case expression_type::CUSTOM:
-                        std::vector<std::string> type_and_expression = code_parsing::split_arguments(code_parsing::get_instruction_name_and_args(element)[1]);
+                        std::vector<std::string> type_and_expression = code_parsing::split_arguments(code_parsing::get_instruction_name_and_args(&element)[1]);
                         element_type_name = type_and_expression[0];
-                        element_value = run_expression(type_and_expression[1], data, variables);
+                        element_value = run_expression(&type_and_expression[1], data, variables);
                         break;
                     }
                     if(raw_element_type != expression_type::OPERATOR) value_buffer = element_value;
@@ -111,54 +113,54 @@ namespace jamal_runner
                     {
                         i++;
                         std::string next_expression = expression_elements[i];
-                        jamal::stack next_expression_value = run_expression(next_expression, data, variables);
-                        jamal::operator_data op_data = (data.type_vector->at(data.types.at(element_type_name))).type_operator;
+                        jamal::stack next_expression_value = run_expression(&next_expression, data, variables);
+                        jamal::operator_data op_data = ((*data).type_vector->at((*(*data).types).at(element_type_name))).type_operator;
 
                         switch (op_data.action_type)
                         {
                         case jamal::operator_action_type::INSTRUCTION:
-                            value_buffer = instructions::run_instruction(op_data.action_name, data, {value_buffer, next_expression_value, stacks::string_to_stack(element)}, variables);
+                            value_buffer = instructions::run_instruction(op_data.action_name, (*data), {value_buffer, next_expression_value, stacks::string_to_stack(element)}, variables);
                             break;
                         case jamal::operator_action_type::SECTION:
                             std::vector<jamal::stack> argv = {value_buffer, next_expression_value, stacks::string_to_stack(element)};
                             std::string op_section_name = op_data.action_name;
                             jamal::variable_map op_section_variables;
-                            value_buffer = jamal::run_section(op_section_name, argv, data, op_section_variables, true);
+                            value_buffer = jamal::run_section(op_section_name, argv, (*data), op_section_variables, true);
                             break;
                         }
                     }
                 }
                 result = value_buffer;
             }
-            else if(line[0] == '(')
+            else if((*line)[0] == '(')
             {
                 std::string inner_line;
                 long p_count = 1;
-                long len = line.size();
+                long len = (*line).size();
                 for(int i = 1; i<len; i++)
                 {
-                    char c = line[i];
+                    char c = (*line)[i];
                     if(c == '(') p_count++;
                     else if (c == ')') (p_count--);
 
                     if(p_count == 0) break;
                     else inner_line.push_back(c);
                 }
-                result = run_expression(inner_line, data, variables);
+                result = run_expression(&inner_line, data, variables);
             }
             else
             {
-                if(line[0] == '"') //is a string
+                if((*line)[0] == '"') //is a string
                 {
-                    int len = line.size();
+                    int len = (*line).size();
                     for(int i = 1; i < len; i++)
                     {
-                        char c = line[i];
+                        char c = (*line)[i];
                         if(c == '"') break;
                         else if(c == '\\')
                         {
                             i++;
-                            char c1 = line[i];
+                            char c1 = (*line)[i];
                             switch (c1)
                             {
                             case 'n':
@@ -178,114 +180,114 @@ namespace jamal_runner
                     }
                     return result;
                 }
-                else if(line[0] == '$') //is a reference to a variable
+                else if((*line)[0] == '$') //is a reference to a variable
                 {
                     try
                     {
-                        std::string var_init(line.begin()+1, line.end());
+                        std::string var_init((*line).begin()+1, (*line).end());
                         if(var_init[0] == '(') //id mode
                         {
                             var_init = std::string(var_init.begin()+1, var_init.end()-1);
-                            long address = stacks::to_long(run_expression(var_init, data, variables));
-                            if(address >= data.stacks.size()){throw jamal_exceptions::jamal_exception(std::string("Adress " + std::to_string(address) + " is outside of existing data").c_str());}
-                            else result = data.stacks[address];
+                            long address = stacks::to_long(run_expression(&var_init, data, variables));
+                            if(address >= (*(*data).stacks).size()){throw jamal_exceptions::jamal_exception(std::string("Adress " + std::to_string(address) + " is outside of existing data").c_str());}
+                            else result = (*(*data).stacks)[address];
                         }
                         else //init mode
                         {
-                            std::vector<std::string> parsed_init = code_parsing::split_variable(var_init, data);
+                            std::vector<std::string> parsed_init = code_parsing::split_variable(&var_init);
 
                             if(parsed_init[1] == "self")
                             {
-                                try {result = data.stacks[variables.at(parsed_init[0]).stack_address];}
+                                try {result = (*(*data).stacks)[(*variables).at(parsed_init[0]).stack_address];}
                                 catch(const std::exception& e) {message::error(std::string("failed to load data from variable \"" + var_init + "\"").c_str());}
                             }
                             else if(parsed_init[1] == "destroy")
                             {
                                 std::string var_name = parsed_init[0];
-                                jamal::type type = data.type_vector->at(data.types.at(variables.at(var_name).type));
+                                jamal::type type = (*data).type_vector->at((*(*data).types).at((*variables).at(var_name).type));
 
                                 if(type.type_destroyer != "none")
                                 {
                                     jamal::variable_map destroyer_variables;
-                                    jamal::variable_data this_var_data = variables.at(var_name);
-                                    variables.erase(var_name);
+                                    jamal::variable_data this_var_data = (*variables).at(var_name);
+                                    (*variables).erase(var_name);
                                     destroyer_variables.emplace(jamal::variable_map::value_type("this", this_var_data));
 
-                                    run_section(type.type_destroyer, std::vector<jamal::stack>(), data, destroyer_variables, true);
+                                    run_section(type.type_destroyer, std::vector<jamal::stack>(), (*data), destroyer_variables, true);
                                 }
                             }
                             else if(parsed_init[1] == "clone")
                             {
-                                jamal::variable_data var_data = variables.at(parsed_init[0]);
+                                jamal::variable_data var_data = (*variables).at(parsed_init[0]);
                                 std::string type_name = var_data.type;
                                 if(type_name == "none")
                                 {
                                     //just copy already existing data
-                                    result = data.stacks[var_data.stack_address];
+                                    result = (*(*data).stacks)[var_data.stack_address];
                                 }
                                 else
                                 {
-                                    jamal::type type = data.type_vector->at(data.types.at(type_name));
+                                    jamal::type type = (*data).type_vector->at((*(*data).types).at(type_name));
                                     std::string cloner_name = type.type_cloner;
                                     if(cloner_name == "none")
                                     {
-                                        result = data.stacks[var_data.stack_address];
+                                        result = (*(*data).stacks)[var_data.stack_address];
                                     }
                                     else
                                     {
                                         jamal::variable_map cloner_variables;
                                         cloner_variables.emplace(jamal::variable_map::value_type("this", var_data));
-                                        result = jamal::run_section(cloner_name, {}, data, cloner_variables, true);
+                                        result = jamal::run_section(cloner_name, {}, (*data), cloner_variables, true);
                                     }
                                 }
                             }
                             else
                             {
-                                jamal::variable_data var_data = variables.at(parsed_init[0]);
-                                jamal::stack raw_data = data.stacks[var_data.stack_address];
+                                jamal::variable_data var_data = (*variables).at(parsed_init[0]);
+                                jamal::stack raw_data = (*(*data).stacks)[var_data.stack_address];
                                 std::string type = var_data.type;
                                 std::string referenced_member = parsed_init[1];
-                                jamal::member_type referenced_member_type = (data.type_vector->at(data.types.at(type))).member_types.at(referenced_member);
+                                jamal::member_type referenced_member_type = ((*data).type_vector->at((*(*data).types).at(type))).member_types.at(referenced_member);
                                 if (referenced_member_type == jamal::member_type::VARIABLE)
                                 {
-                                    jamal::type_member_data tmd {(data.type_vector->at(data.types.at(type))).members.at(referenced_member)};
+                                    jamal::type_member_data tmd {((*data).type_vector->at((*(*data).types).at(type))).members.at(referenced_member)};
                                     result = std::vector<u_char>(raw_data.begin()+tmd.start_pos, raw_data.begin()+tmd.length-1);
                                 }
                                 else if(referenced_member_type == jamal::member_type::SUBSECTION)
                                 {
-                                    std::string subsection_name = (data.type_vector->at(data.types.at(type))).subsections.at(referenced_member);
+                                    std::string subsection_name = ((*data).type_vector->at((*(*data).types).at(type))).subsections.at(referenced_member);
                                     std::vector<jamal::stack> args;
                                     std::vector<std::string> raw_args = code_parsing::split_arguments(parsed_init[2]);
                                     for (auto &&raw_arg : raw_args)
                                     {
-                                        args.push_back(run_expression(raw_arg, data, variables));
+                                        args.push_back(run_expression(&raw_arg, data, variables));
                                     }
                                     jamal::variable_map subsection_variables;
                                     subsection_variables.emplace(jamal::variable_map::value_type("this", var_data));
-                                    result = jamal::run_section(subsection_name, args, data, subsection_variables, true);;
+                                    result = jamal::run_section(subsection_name, args, (*data), subsection_variables, true);;
                                 }           
                             }
                         }
                     }
                     catch(const std::exception& e)
                     {
-                        std::string exception_message = jamal_exceptions::append_exception_message(e.what(), "While trying to load data from \"" + line + "\":");
+                        std::string exception_message = jamal_exceptions::append_exception_message(e.what(), "While trying to load data from \"" + (*line) + "\":");
                         throw jamal_exceptions::jamal_exception(exception_message.c_str());
                     }   
                 }
-                else if(line[0] == '~') //is a type assumption for mathematical expressions
+                else if((*line)[0] == '~') //is a type assumption for mathematical expressions
                 {
                     std::vector<std::string> parsed_line = code_parsing::get_instruction_name_and_args(line);
                     std::string expression = code_parsing::split_arguments(parsed_line[1])[1];
-                    result = run_expression(expression, data, variables);
+                    result = run_expression(&expression, data, variables);
                 }
-                else if(code_parsing::is_int(line[0])) //is a numeric expression
+                else if(code_parsing::is_int((*line)[0])) //is a numeric expression
                 {
-                    std::vector<std::string> float_parts = string_functions::split(line, '.');
+                    std::vector<std::string> float_parts = string_functions::split(&(*line), '.');
                     if(float_parts.size() == 1)
                     {
                         //is an int
-                        long value = std::stol(line);
+                        long value = std::stol((*line));
                         unsigned char bytes[sizeof(long)];
                         std::memcpy(bytes, &value, sizeof(long));
                         result = (jamal::stack) std::vector<u_char>(bytes, bytes + sizeof(bytes)/sizeof(u_char));
@@ -293,7 +295,7 @@ namespace jamal_runner
                     else if(float_parts.size() == 2)
                     {
                         //is a float
-                        float value = std::stof(line);
+                        float value = std::stof((*line));
                         unsigned char bytes[sizeof(float)];
                         std::memcpy(bytes, &value, sizeof(float));
                         result = (jamal::stack) std::vector<u_char>(bytes, bytes + sizeof(bytes)/sizeof(u_char));
@@ -305,18 +307,18 @@ namespace jamal_runner
                         //you are weird
                         //just
                         //message::error("kill yourself");
-                        message::error(std::string("while trying to parse a numeric expression: " + line).c_str());
+                        message::error(std::string("while trying to parse a numeric expression: " + (*line)).c_str());
                     }
                 }
-                else if(line[0] == '>') //fast writing to an EXISTING variable
+                else if((*line)[0] == '>') //fast writing to an EXISTING variable
                 {
-                    line = line.substr(1);
+                    (*line) = (*line).substr(1);
                     std::vector<std::string> parsed_line = code_parsing::get_instruction_name_and_args(line);
                     std::string varname = parsed_line[0];
-                    jamal::stack new_val = run_expression(parsed_line[1], data, variables);
-                    jamal::variable_data var_data = variables.at(varname);
+                    jamal::stack new_val = run_expression(&parsed_line[1], data, variables);
+                    jamal::variable_data var_data = (*variables).at(varname);
                     long var_id = var_data.stack_address;
-                    data.stacks[var_id] = new_val;
+                    (*(*data).stacks)[var_id] = new_val;
                 }
                 else //is an intsruction
                 {
@@ -324,15 +326,15 @@ namespace jamal_runner
                     std::string i_name = parsed_line[0];
                     std::vector<std::string> argv = code_parsing::split_arguments(parsed_line[1]);
                     std::vector<jamal::stack> arguments;
-                    for (auto &&arg : argv) {arguments.push_back(run_expression(arg, data, variables));}
-                    result = instructions::run_instruction(i_name, data, arguments, variables);
+                    for (auto &&arg : argv) {arguments.push_back(run_expression(&arg, data, variables));}
+                    result = instructions::run_instruction(i_name, (*data), arguments, variables);
                 }
                 return result;
             }
         }
         catch(const std::exception& e)
         {
-            std::string exception_message = jamal_exceptions::append_exception_message(e.what(), "While trying to run expression \"" + line + "\":");
+            std::string exception_message = jamal_exceptions::append_exception_message(e.what(), "While trying to run expression \"" + (*line) + "\":");
             throw jamal_exceptions::jamal_exception(exception_message.c_str());
         }
         return result;
@@ -346,16 +348,16 @@ namespace jamal_runner
             std::string line = code[i];
             if(line[0] == '#') //The code line is detected to be a special instruction
             {
-                std::vector<std::string> parsed_line = code_parsing::get_instruction_name_and_args(line);
+                std::vector<std::string> parsed_line = code_parsing::get_instruction_name_and_args(&line);
                 if(parsed_line[0] == "#return")
                 {
                     std::vector<std::string> args = code_parsing::split_arguments(parsed_line[1]);
-                    jamal::stack return_value = run_expression(args[0], data, variables);
+                    jamal::stack return_value = run_expression(&args[0], &data, &variables);
                     if(args.size() > 1)
                     {
                         for(int i1 = 1; i1 < args.size(); i1++)
                         {
-                            run_expression(args[i1], data, variables);
+                            run_expression(&args[i1], &data, &variables);
                         }
                     }
                     return_point = true;
@@ -363,8 +365,8 @@ namespace jamal_runner
                 }
                 else if(parsed_line[0] == "#if")
                 {
-                    std::string expression = code_parsing::split_arguments(code_parsing::get_instruction_name_and_args(line)[1])[0];
-                    long expression_result = stacks::to_long(run_expression(expression, data, variables));
+                    std::string expression = code_parsing::split_arguments(code_parsing::get_instruction_name_and_args(&line)[1])[0];
+                    long expression_result = stacks::to_long(run_expression(&expression, &data, &variables));
                     bool run_cluster = expression_result > 0;
                     long end_count = 1;
                     i++;
@@ -374,7 +376,7 @@ namespace jamal_runner
                         std::string internal_line = string_functions::remove_front_spaces(code[i]);
                         if(internal_line[0] == '#')
                         {
-                            std::vector<std::string> parsed_internal_line = code_parsing::get_instruction_name_and_args(internal_line);
+                            std::vector<std::string> parsed_internal_line = code_parsing::get_instruction_name_and_args(&internal_line);
                             if(parsed_internal_line[0] == "#if" || parsed_internal_line[0] == "#while" || parsed_internal_line[0] == "#else")
                             {
                                 end_count++;
@@ -401,7 +403,7 @@ namespace jamal_runner
                         }
                     }
                     //check if is followed by an else statement
-                    if(i+1 < code.size())if(code_parsing::get_instruction_name_and_args(code[i])[0] == "#else")
+                    if(i+1 < code.size())if(code_parsing::get_instruction_name_and_args(&code[i])[0] == "#else")
                     {
                         i++;
                         bool run_else;
@@ -415,7 +417,7 @@ namespace jamal_runner
                             std::string internal_line = string_functions::remove_front_spaces(code[i]);
                             if(internal_line[0] == '#')
                             {
-                                std::vector<std::string> parsed_internal_line = code_parsing::get_instruction_name_and_args(internal_line);
+                                std::vector<std::string> parsed_internal_line = code_parsing::get_instruction_name_and_args(&internal_line);
                                 if(parsed_internal_line[0] == "#if" || parsed_internal_line[0] == "#while" || parsed_internal_line[0] == "#else")
                                 {
                                     end_count++;
@@ -453,14 +455,14 @@ namespace jamal_runner
 
                     for(;i < line_count; i++)
                     {
-                        std::string internal_line = string_functions::remove_front_spaces(code[i]);
-                        if(internal_line[0] == '#')
+                        std::string* internal_line = &code[i];
+                        if((*internal_line)[0] == '#')
                         {
                             std::vector<std::string> parsed_internal_line = code_parsing::get_instruction_name_and_args(internal_line);
                             if(parsed_internal_line[0] == "#if" || parsed_internal_line[0] == "#while" || parsed_internal_line[0] == "#else")
                             {
                                 end_count++;
-                                internal_code.push_back(internal_line);
+                                internal_code.push_back((*internal_line));
                             }
                             else if(parsed_internal_line[0] == "#end")
                             {
@@ -470,15 +472,15 @@ namespace jamal_runner
                                     i++;
                                     break;
                                 }
-                                else internal_code.push_back(internal_line);
+                                else internal_code.push_back((*internal_line));
                             }
-                            else internal_code.push_back(internal_line);
+                            else internal_code.push_back((*internal_line));
                         }
-                        else internal_code.push_back(internal_line);
+                        else internal_code.push_back((*internal_line));
                     }
                     
                     jamal::stack potential_result;
-                    while (stacks::to_long(run_expression(expression, data, variables)) > 0 && return_point != true)
+                    while (stacks::to_long(run_expression(&expression, &data, &variables)) > 0 && return_point != true)
                     {
                         potential_result = run_code_cluster(internal_code, data, variables, return_point);
                     }
@@ -494,7 +496,7 @@ namespace jamal_runner
             }
             else //The code line is a normal instruction
             {
-                run_expression(line, data, variables);
+                run_expression(&line, &data, &variables);
             }
         }
         return result;
@@ -507,7 +509,8 @@ namespace jamal_runner
         jamal::jamal_data data;
         jamal::type_index_map types;
         std::vector<jamal::type> typev;
-        try {parsed_code = code_parsing::parse_imports(code, "", data);}
+        std::vector<std::string> libraries;
+        try {parsed_code = code_parsing::parse_imports(code, "", libraries);}
         catch(const std::exception& e)
         {
             std::string error = e.what();
@@ -515,6 +518,7 @@ namespace jamal_runner
             message::error(error.c_str());
             return;
         }
+        libraries.clear();
         try {sections = code_parsing::parse_sections(parsed_code);}
         catch(const std::exception& e)
         {
@@ -543,13 +547,14 @@ namespace jamal_runner
         jamal::instruction_map instructions;
         
         instructions::load_basic(instructions);
+        std::vector<jamal::stack> default_stacks;
 
-        data.entries = entries;
-        data.sections = sections;
-        data.instructions = instructions;
+        data.entries = &entries;
+        data.sections = &sections;
+        data.instructions = &instructions;
         data.type_vector = &typev;
-        data.types = types;
-        data.stacks = std::vector<jamal::stack>();
+        data.types = &types;
+        data.stacks = &default_stacks;
 
         std::string last_entry;
         try
@@ -564,7 +569,8 @@ namespace jamal_runner
         }
         catch(std::exception &e)
         {
-            std::vector<std::string> lines = string_functions::split(e.what(), '\n');
+            std::string raw_msg = e.what();
+            std::vector<std::string> lines = string_functions::split(&raw_msg, '\n');
             std::string full_message;
             for (auto &&l : lines)
             {
@@ -580,7 +586,7 @@ namespace jamal_runner
             std::cout << "  Memmory data after finnishing:\n";
 
             int i = 0;
-            for (auto &&stk : data.stacks)
+            for (auto &&stk : (*data.stacks))
             {
                 std::cout << "      " << "At " << i << ": [ ";
                 for (auto &&e : stk)

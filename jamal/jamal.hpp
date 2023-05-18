@@ -81,13 +81,12 @@ namespace jamal
 
     struct jamal_data
     {
-        std::vector<std::string> libraries;
-        std::vector<stack> stacks;
-        section_map sections;
-        std::vector<std::string> entries;
-        instruction_map instructions;
+        std::vector<stack>* stacks;
+        section_map* sections;
+        std::vector<std::string>* entries;
+        instruction_map* instructions;
         std::vector<type>* type_vector;
-        type_index_map types;
+        type_index_map* types;
     };
 
     long define_stack_in_vector(std::vector<stack>& vec);
